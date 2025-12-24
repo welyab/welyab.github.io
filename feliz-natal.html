@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Feliz Natal - Partículas</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #070a12; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+    .hint {
+      position: fixed; left: 12px; bottom: 12px;
+      color: rgba(255,255,255,.72);
+      font: 12px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      user-select: none;
+      background: rgba(0,0,0,.25);
+      padding: 8px 10px;
+      border-radius: 10px;
+      backdrop-filter: blur(6px);
+    }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hint">Passe o mouse (ou toque) perto das bolinhas. Afaste para elas voltarem ✨</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d", { alpha: false });
+
+  // Config
+  const MSG = "Feliz Natal!";
+  const SUB = "🎄 2025";
+  const DPR_LIMIT = 2;
+  const BG1 = "#070a12";
+  const BG2 = "#0b1430";
+
+  const cfg = {
+    dotRadius: 2.1,
+    dotGap: 5,           // espaçamento do "sample" do texto
+    density: 1.0,        // 1 = tudo, <1 pula pontos (menos dots)
+    repelRadius: 110,
+    repelStrength: 2800, // força da repulsão
+    returnStrength: 0.08,// "mola" para voltar ao alvo
+    damping: 0.86,       // amortecimento
+    maxSpeed: 14,
+    jitter: 0.0          // se quiser tremidinho, 0.2...
+  };
+
+  // Estado do ponteiro
+  const pointer = {
+    x: 0, y: 0,
+    active: false,
+    // active = true quando mouse está dentro ou há toque
+  };
+
+  // Partículas
+  let particles = [];
+  let W = 0, H = 0, dpr = 1;
+
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, DPR_LIMIT);
+    W = Math.floor(window.innerWidth);
+    H = Math.floor(window.innerHeight);
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    buildParticlesFromText();
+  }
+
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, BG2);
+    g.addColorStop(1, BG1);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // brilho suave
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(W * 0.15, H * 0.2, Math.min(W, H) * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function buildParticlesFromText() {
+    // Canvas offscreen para "rasterizar" o texto e coletar pixels
+    const off = document.createElement("canvas");
+    const octx = off.getContext("2d");
+    off.width = W;
+    off.height = H;
+
+    octx.clearRect(0, 0, W, H);
+
+    // Ajusta tamanho do texto conforme tela
+    const mainSize = Math.max(52, Math.min(160, W * 0.12));
+    const subSize  = Math.max(18, Math.min(44,  W * 0.035));
+
+    octx.textAlign = "center";
+    octx.textBaseline = "middle";
+
+    // Texto principal
+    octx.fillStyle = "#ffffff";
+    octx.font = `800 ${mainSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    octx.fillText(MSG, W / 2, H * 0.46);
+
+    // Texto secundário
+    octx.globalAlpha = 0.9;
+    octx.font = `700 ${subSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    octx.fillText(SUB, W / 2, H * 0.58);
+    octx.globalAlpha = 1;
+
+    const img = octx.getImageData(0, 0, W, H).data;
+
+    const targets = [];
+    const step = Math.max(3, Math.floor(cfg.dotGap));
+    // Coleta pontos onde o texto tem alfa > 0
+    for (let y = 0; y < H; y += step) {
+      for (let x = 0; x < W; x += step) {
+        const i = (y * W + x) * 4;
+        const a = img[i + 3];
+        if (a > 20) {
+          // densidade opcional
+          if (cfg.density < 1 && Math.random() > cfg.density) continue;
+          targets.push({ x, y });
+        }
+      }
+    }
+
+    // Se já existirem partículas, reaproveita para animação suave no resize
+    const old = particles;
+    particles = new Array(targets.length);
+
+    for (let i = 0; i < targets.length; i++) {
+      const t = targets[i];
+      const prev = old[i % Math.max(1, old.length)];
+
+      const startX = prev ? prev.x : (W / 2 + (Math.random() - 0.5) * 40);
+      const startY = prev ? prev.y : (H / 2 + (Math.random() - 0.5) * 40);
+
+      particles[i] = {
+        x: startX,
+        y: startY,
+        vx: prev ? prev.vx : 0,
+        vy: prev ? prev.vy : 0,
+        tx: t.x,
+        ty: t.y,
+        r: cfg.dotRadius * (0.85 + Math.random() * 0.5),
+        // tom levemente variado
+        hueShift: (Math.random() * 18 - 9)
+      };
+    }
+  }
+
+  function update() {
+    // Física simples: repulsão + retorno ao alvo
+    const pr = cfg.repelRadius;
+    const pr2 = pr * pr;
+
+    for (const p of particles) {
+      // força de retorno ao alvo (mola)
+      const dxT = p.tx - p.x;
+      const dyT = p.ty - p.y;
+      p.vx += dxT * cfg.returnStrength;
+      p.vy += dyT * cfg.returnStrength;
+
+      // repulsão do ponteiro (mouse/toque)
+      if (pointer.active) {
+        const dx = p.x - pointer.x;
+        const dy = p.y - pointer.y;
+        const d2 = dx * dx + dy * dy;
+
+        if (d2 > 0.0001 && d2 < pr2) {
+          const d = Math.sqrt(d2);
+          const nx = dx / d;
+          const ny = dy / d;
+
+          // queda suave com distância (mais forte perto)
+          const falloff = 1 - d / pr;
+          const force = cfg.repelStrength * falloff;
+
+          p.vx += nx * (force / (d + 8));
+          p.vy += ny * (force / (d + 8));
+        }
+      }
+
+      // jitter opcional
+      if (cfg.jitter > 0) {
+        p.vx += (Math.random() - 0.5) * cfg.jitter;
+        p.vy += (Math.random() - 0.5) * cfg.jitter;
+      }
+
+      // amortecimento
+      p.vx *= cfg.damping;
+      p.vy *= cfg.damping;
+
+      // limita velocidade
+      const sp2 = p.vx * p.vx + p.vy * p.vy;
+      const ms = cfg.maxSpeed;
+      if (sp2 > ms * ms) {
+        const s = Math.sqrt(sp2);
+        p.vx = (p.vx / s) * ms;
+        p.vy = (p.vy / s) * ms;
+      }
+
+      // integra
+      p.x += p.vx;
+      p.y += p.vy;
+    }
+  }
+
+  function render() {
+    drawBackground();
+
+    // desenha bolinhas
+    // cor base "quase branca" com leve dourado
+    for (const p of particles) {
+      // brilho por proximidade (opcional)
+      let glow = 0;
+      if (pointer.active) {
+        const dx = p.x - pointer.x;
+        const dy = p.y - pointer.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        glow = clamp(1 - d / cfg.repelRadius, 0, 1);
+      }
+
+      // bolinha
+      const a = 0.90 + glow * 0.10;
+      ctx.globalAlpha = a;
+
+      // preenchimento
+      // (sem HSL pesado por performance; usa RGB levemente dourado)
+      // p.hueShift só perturba a mistura
+      const s = p.hueShift;
+      const r = clamp(245 + s, 0, 255);
+      const g = clamp(238 + s, 0, 255);
+      const b = clamp(220 + s, 0, 255);
+      ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+
+      // glow suave (círculo maior com alpha)
+      if (glow > 0.02) {
+        ctx.globalAlpha = 0.10 * glow;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * (3.2 + glow * 2.5), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = a;
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // pequenos "stars"
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = "#fff";
+    for (let i = 0; i < 40; i++) {
+      const x = (i * 9973) % W;
+      const y = (i * 5737) % H;
+      const s = (i % 3) + 0.6;
+      ctx.fillRect(x, y, s, s);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function loop() {
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  // Mouse
+  window.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = e.clientX - rect.left;
+    pointer.y = e.clientY - rect.top;
+    pointer.active = true;
+  }, { passive: true });
+
+  window.addEventListener("mouseleave", () => {
+    pointer.active = false;
+  }, { passive: true });
+
+  // Touch / Pointer
+  function setPointerFromTouch(t) {
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = t.clientX - rect.left;
+    pointer.y = t.clientY - rect.top;
+    pointer.active = true;
+  }
+
+  window.addEventListener("touchstart", (e) => {
+    if (e.touches && e.touches[0]) setPointerFromTouch(e.touches[0]);
+  }, { passive: true });
+
+  window.addEventListener("touchmove", (e) => {
+    if (e.touches && e.touches[0]) setPointerFromTouch(e.touches[0]);
+  }, { passive: true });
+
+  window.addEventListener("touchend", () => {
+    pointer.active = false;
+  }, { passive: true });
+
+  // Também funciona com caneta/Pointer Events (melhor em alguns devices)
+  canvas.addEventListener("pointerdown", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = e.clientX - rect.left;
+    pointer.y = e.clientY - rect.top;
+    pointer.active = true;
+  }, { passive: true });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (!pointer.active && e.pointerType === "mouse") return; // mouse só ativa no mousemove global
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = e.clientX - rect.left;
+    pointer.y = e.clientY - rect.top;
+  }, { passive: true });
+
+  canvas.addEventListener("pointerup", () => {
+    pointer.active = false;
+  }, { passive: true });
+
+  window.addEventListener("resize", resize, { passive: true });
+
+  resize();
+  loop();
+})();
+</script>
+</body>
+</html>
