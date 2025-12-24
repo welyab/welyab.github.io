@@ -3,67 +3,124 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Feliz Natal - Partículas</title>
+  <title>Feliz Natal — Dev Particles</title>
   <style>
-    html, body { margin: 0; height: 100%; background: #070a12; overflow: hidden; }
+    html, body { margin: 0; height: 100%; background: #05070f; overflow: hidden; }
     canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
-    .hint {
-      position: fixed; left: 12px; bottom: 12px;
-      color: rgba(255,255,255,.72);
-      font: 12px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+    .hud {
+      position: fixed;
+      left: 12px; top: 12px;
+      display: flex; gap: 10px; align-items: center;
+      color: rgba(255,255,255,.78);
+      font: 12px/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       user-select: none;
-      background: rgba(0,0,0,.25);
-      padding: 8px 10px;
-      border-radius: 10px;
-      backdrop-filter: blur(6px);
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.08);
+      max-width: min(720px, calc(100vw - 24px));
+    }
+    .pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      white-space: nowrap;
+    }
+    .hint {
+      position: fixed;
+      left: 12px; bottom: 12px;
+      color: rgba(255,255,255,.70);
+      font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      user-select: none;
+      background: rgba(0,0,0,.28);
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(8px);
+      max-width: min(760px, calc(100vw - 24px));
+    }
+    .hint b { color: rgba(255,255,255,.92); }
+    .kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      transform: translateY(-1px);
     }
   </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div class="hint">Passe o mouse (ou toque) perto das bolinhas. Afaste para elas voltarem ✨</div>
+
+<div class="hud">
+  <span class="pill">console.log("Feliz Natal!")</span>
+  <span class="pill">🎄 build: green</span>
+  <span class="pill">CI ✅</span>
+  <span class="pill">deploy: 🎁</span>
+</div>
+
+<div class="hint">
+  Passe o mouse (ou toque) perto das bolinhas: elas fogem até formar um <b>anel de equilíbrio</b> ao redor do ponteiro.
+  Afaste para elas voltarem ao texto. Dica: toque como se fosse um <span class="kbd">cursor</span> 👆
+</div>
 
 <script>
 (() => {
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d", { alpha: false });
 
+  // Mensagem com tema dev
+  const MSG  = "Feliz Natal, Dev!";
+  const SUB  = "git commit -m \"Merry Christmas\"";
+  const SUB2 = "CI: ✅  |  tests: ✅  |  build: ✅  |  deploy: 🎁";
+
   // Config
-  const MSG = "Feliz Natal!";
-  const SUB = "🎄 2025";
-  const DPR_LIMIT = 2;
-  const BG1 = "#070a12";
-  const BG2 = "#0b1430";
-
   const cfg = {
-    dotRadius: 2.1,
-    dotGap: 5,           // espaçamento do "sample" do texto
-    density: 1.0,        // 1 = tudo, <1 pula pontos (menos dots)
-    repelRadius: 110,
-    repelStrength: 2800, // força da repulsão
-    returnStrength: 0.08,// "mola" para voltar ao alvo
-    damping: 0.86,       // amortecimento
+    dotRadius: 2.05,
+    dotGap: 5,
+    density: 1.0,
+
+    // repulsão com equilíbrio em anel:
+    eqDist: 92,
+    deadBand: 3,
+    repelRadius: 200,
+    repelStrength: 980,
+    eps: 10,
+
+    // retorno ao texto (mola)
+    returnStrength: 0.080,
+
+    // dinâmica
+    damping: 0.865,
     maxSpeed: 14,
-    jitter: 0.0          // se quiser tremidinho, 0.2...
+
+    // estética
+    jitter: 0.0,
+    dprLimit: 2
   };
 
-  // Estado do ponteiro
-  const pointer = {
-    x: 0, y: 0,
-    active: false,
-    // active = true quando mouse está dentro ou há toque
-  };
+  // Paleta (sem fixar em CSS, só no canvas)
+  const BG_TOP = "#061027";
+  const BG_BOT = "#03040a";
+
+  // Ponteiro
+  const pointer = { x: 0, y: 0, active: false };
 
   // Partículas
   let particles = [];
   let W = 0, H = 0, dpr = 1;
 
-  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, DPR_LIMIT);
+    dpr = Math.min(window.devicePixelRatio || 1, cfg.dprLimit);
     W = Math.floor(window.innerWidth);
     H = Math.floor(window.innerHeight);
+
     canvas.width = Math.floor(W * dpr);
     canvas.height = Math.floor(H * dpr);
     canvas.style.width = W + "px";
@@ -75,22 +132,40 @@
 
   function drawBackground() {
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, BG2);
-    g.addColorStop(1, BG1);
+    g.addColorStop(0, BG_TOP);
+    g.addColorStop(1, BG_BOT);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
-    // brilho suave
-    ctx.globalAlpha = 0.12;
-    ctx.fillStyle = "#ffffff";
+    // glow suave estilo "monitor"
+    ctx.globalAlpha = 0.10;
+    ctx.fillStyle = "#43ff99"; // brilho verdinho sutil (apenas no background)
     ctx.beginPath();
-    ctx.arc(W * 0.15, H * 0.2, Math.min(W, H) * 0.22, 0, Math.PI * 2);
+    ctx.arc(W * 0.18, H * 0.22, Math.min(W, H) * 0.20, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // grade discreta
+    ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1;
+    const step = 34;
+    for (let x = 0; x <= W; x += step) {
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, 0);
+      ctx.lineTo(x + 0.5, H);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= H; y += step) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(W, y + 0.5);
+      ctx.stroke();
+    }
     ctx.globalAlpha = 1;
   }
 
   function buildParticlesFromText() {
-    // Canvas offscreen para "rasterizar" o texto e coletar pixels
     const off = document.createElement("canvas");
     const octx = off.getContext("2d");
     off.width = W;
@@ -98,42 +173,49 @@
 
     octx.clearRect(0, 0, W, H);
 
-    // Ajusta tamanho do texto conforme tela
-    const mainSize = Math.max(52, Math.min(160, W * 0.12));
-    const subSize  = Math.max(18, Math.min(44,  W * 0.035));
+    // tamanhos responsivos
+    const mainSize = Math.max(44, Math.min(150, W * 0.095));
+    const subSize  = Math.max(14, Math.min(36,  W * 0.028));
+    const sub2Size = Math.max(12, Math.min(26,  W * 0.020));
 
     octx.textAlign = "center";
     octx.textBaseline = "middle";
 
-    // Texto principal
-    octx.fillStyle = "#ffffff";
-    octx.font = `800 ${mainSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    octx.fillText(MSG, W / 2, H * 0.46);
+    // "Terminal glow" do texto (desenha 2x: sombra + texto)
+    octx.font = `900 ${mainSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace`;
+    octx.fillStyle = "rgba(67,255,153,0.35)";
+    octx.fillText(MSG, W/2, H * 0.44);
 
-    // Texto secundário
-    octx.globalAlpha = 0.9;
-    octx.font = `700 ${subSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    octx.fillText(SUB, W / 2, H * 0.58);
+    octx.fillStyle = "#ffffff";
+    octx.fillText(MSG, W/2, H * 0.44);
+
+    octx.globalAlpha = 0.95;
+    octx.font = `700 ${subSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace`;
+    octx.fillStyle = "#ffffff";
+    octx.fillText(SUB, W/2, H * 0.55);
+
+    octx.globalAlpha = 0.85;
+    octx.font = `600 ${sub2Size}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace`;
+    octx.fillStyle = "#cfe6ff";
+    octx.fillText(SUB2, W/2, H * 0.61);
     octx.globalAlpha = 1;
 
     const img = octx.getImageData(0, 0, W, H).data;
 
     const targets = [];
     const step = Math.max(3, Math.floor(cfg.dotGap));
-    // Coleta pontos onde o texto tem alfa > 0
+
     for (let y = 0; y < H; y += step) {
       for (let x = 0; x < W; x += step) {
         const i = (y * W + x) * 4;
         const a = img[i + 3];
-        if (a > 20) {
-          // densidade opcional
+        if (a > 25) {
           if (cfg.density < 1 && Math.random() > cfg.density) continue;
-          targets.push({ x, y });
+          targets.push({ x, y, a });
         }
       }
     }
 
-    // Se já existirem partículas, reaproveita para animação suave no resize
     const old = particles;
     particles = new Array(targets.length);
 
@@ -141,59 +223,73 @@
       const t = targets[i];
       const prev = old[i % Math.max(1, old.length)];
 
-      const startX = prev ? prev.x : (W / 2 + (Math.random() - 0.5) * 40);
-      const startY = prev ? prev.y : (H / 2 + (Math.random() - 0.5) * 40);
+      const startX = prev ? prev.x : (W/2 + (Math.random()-0.5)*60);
+      const startY = prev ? prev.y : (H/2 + (Math.random()-0.5)*60);
+
+      // "classe" visual baseada no alfa do texto (mais forte no MSG)
+      const kind = t.a > 200 ? 0 : (t.a > 120 ? 1 : 2);
 
       particles[i] = {
-        x: startX,
-        y: startY,
+        x: startX, y: startY,
         vx: prev ? prev.vx : 0,
         vy: prev ? prev.vy : 0,
-        tx: t.x,
-        ty: t.y,
-        r: cfg.dotRadius * (0.85 + Math.random() * 0.5),
-        // tom levemente variado
-        hueShift: (Math.random() * 18 - 9)
+        tx: t.x, ty: t.y,
+        r: cfg.dotRadius * (0.85 + Math.random()*0.55),
+        kind,
+        seed: Math.random()
       };
     }
   }
 
+  function keepInBounds(p) {
+    if (p.x < p.r) { p.x = p.r; p.vx *= -0.45; }
+    else if (p.x > W - p.r) { p.x = W - p.r; p.vx *= -0.45; }
+
+    if (p.y < p.r) { p.y = p.r; p.vy *= -0.45; }
+    else if (p.y > H - p.r) { p.y = H - p.r; p.vy *= -0.45; }
+  }
+
   function update() {
-    // Física simples: repulsão + retorno ao alvo
-    const pr = cfg.repelRadius;
-    const pr2 = pr * pr;
+    const R = cfg.repelRadius;
+    const R2 = R * R;
 
     for (const p of particles) {
-      // força de retorno ao alvo (mola)
+      // retorno ao texto
       const dxT = p.tx - p.x;
       const dyT = p.ty - p.y;
       p.vx += dxT * cfg.returnStrength;
       p.vy += dyT * cfg.returnStrength;
 
-      // repulsão do ponteiro (mouse/toque)
+      // repulsão até equilíbrio (anel)
       if (pointer.active) {
         const dx = p.x - pointer.x;
         const dy = p.y - pointer.y;
-        const d2 = dx * dx + dy * dy;
+        const d2 = dx*dx + dy*dy;
 
-        if (d2 > 0.0001 && d2 < pr2) {
+        if (d2 > 0.0001 && d2 < R2) {
           const d = Math.sqrt(d2);
           const nx = dx / d;
           const ny = dy / d;
 
-          // queda suave com distância (mais forte perto)
-          const falloff = 1 - d / pr;
-          const force = cfg.repelStrength * falloff;
+          // só empurra se estiver dentro do "eqDist"
+          const delta = cfg.eqDist - d;
+          if (delta > cfg.deadBand) {
+            // força ~ (delta/eqDist) * 1/(d+eps) com falloff até R
+            const ringFactor = delta / cfg.eqDist;
+            const inv = 1 / (d + cfg.eps);
+            const radiusFalloff = 1 - d / R;
+            const force = cfg.repelStrength * ringFactor * inv * radiusFalloff;
 
-          p.vx += nx * (force / (d + 8));
-          p.vy += ny * (force / (d + 8));
+            p.vx += nx * force;
+            p.vy += ny * force;
+          }
         }
       }
 
       // jitter opcional
       if (cfg.jitter > 0) {
-        p.vx += (Math.random() - 0.5) * cfg.jitter;
-        p.vy += (Math.random() - 0.5) * cfg.jitter;
+        p.vx += (Math.random()-0.5) * cfg.jitter;
+        p.vy += (Math.random()-0.5) * cfg.jitter;
       }
 
       // amortecimento
@@ -201,9 +297,9 @@
       p.vy *= cfg.damping;
 
       // limita velocidade
-      const sp2 = p.vx * p.vx + p.vy * p.vy;
+      const sp2 = p.vx*p.vx + p.vy*p.vy;
       const ms = cfg.maxSpeed;
-      if (sp2 > ms * ms) {
+      if (sp2 > ms*ms) {
         const s = Math.sqrt(sp2);
         p.vx = (p.vx / s) * ms;
         p.vy = (p.vy / s) * ms;
@@ -212,16 +308,49 @@
       // integra
       p.x += p.vx;
       p.y += p.vy;
+
+      keepInBounds(p);
     }
+  }
+
+  function drawCursor(x, y) {
+    // cursor estilizado (crosshair + brackets)
+    ctx.globalAlpha = 0.65;
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "#43ff99";
+
+    const s = 10;
+    ctx.beginPath();
+    ctx.moveTo(x - s, y);
+    ctx.lineTo(x + s, y);
+    ctx.moveTo(x, y - s);
+    ctx.lineTo(x, y + s);
+    ctx.stroke();
+
+    const b = 16;
+    ctx.beginPath();
+    ctx.moveTo(x - b, y - b/2);
+    ctx.lineTo(x - b, y - b);
+    ctx.lineTo(x - b/2, y - b);
+    ctx.moveTo(x + b, y - b/2);
+    ctx.lineTo(x + b, y - b);
+    ctx.lineTo(x + b/2, y - b);
+
+    ctx.moveTo(x - b, y + b/2);
+    ctx.lineTo(x - b, y + b);
+    ctx.lineTo(x - b/2, y + b);
+    ctx.moveTo(x + b, y + b/2);
+    ctx.lineTo(x + b, y + b);
+    ctx.lineTo(x + b/2, y + b);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 
   function render() {
     drawBackground();
 
-    // desenha bolinhas
-    // cor base "quase branca" com leve dourado
+    // partículas com "estilo dev" (verdinhas/brancas/azuladas)
     for (const p of particles) {
-      // brilho por proximidade (opcional)
       let glow = 0;
       if (pointer.active) {
         const dx = p.x - pointer.x;
@@ -230,44 +359,47 @@
         glow = clamp(1 - d / cfg.repelRadius, 0, 1);
       }
 
-      // bolinha
-      const a = 0.90 + glow * 0.10;
+      // cor por "kind" (MSG mais verde, resto mais claro/azulado)
+      // sem usar HSL pesado — usa RGB fixo por tipo
+      let r = 240, g = 245, b = 255;
+      if (p.kind === 0) { r = 120; g = 255; b = 190; }      // verde terminal
+      else if (p.kind === 1) { r = 235; g = 250; b = 255; } // branco frio
+      else { r = 200; g = 220; b = 255; }                   // azulado
+
+      // brilho extra perto do ponteiro
+      const a = 0.88 + glow * 0.12;
       ctx.globalAlpha = a;
 
-      // preenchimento
-      // (sem HSL pesado por performance; usa RGB levemente dourado)
-      // p.hueShift só perturba a mistura
-      const s = p.hueShift;
-      const r = clamp(245 + s, 0, 255);
-      const g = clamp(238 + s, 0, 255);
-      const b = clamp(220 + s, 0, 255);
-      ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
-
-      // glow suave (círculo maior com alpha)
+      // glow halo
       if (glow > 0.02) {
         ctx.globalAlpha = 0.10 * glow;
+        ctx.fillStyle = "rgba(67,255,153,1)";
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * (3.2 + glow * 2.5), 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.r * (3.2 + glow * 3.0), 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = a;
       }
 
+      ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
 
-    // pequenos "stars"
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = "#fff";
-    for (let i = 0; i < 40; i++) {
-      const x = (i * 9973) % W;
-      const y = (i * 5737) % H;
-      const s = (i % 3) + 0.6;
-      ctx.fillRect(x, y, s, s);
+    // "código caindo" bem leve no fundo (apenas visual, baratinho)
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = "#43ff99";
+    const cols = Math.floor(W / 26);
+    for (let i = 0; i < cols; i++) {
+      const x = i * 26 + 8;
+      const y = (i * 97 + performance.now() * 0.06) % (H + 120) - 120;
+      ctx.fillRect(x, y, 2, 18);
+      ctx.fillRect(x, y + 26, 2, 10);
     }
     ctx.globalAlpha = 1;
+
+    if (pointer.active) drawCursor(pointer.x, pointer.y);
   }
 
   function loop() {
@@ -276,7 +408,7 @@
     requestAnimationFrame(loop);
   }
 
-  // Mouse
+  // Interação
   window.addEventListener("mousemove", (e) => {
     const rect = canvas.getBoundingClientRect();
     pointer.x = e.clientX - rect.left;
@@ -284,11 +416,8 @@
     pointer.active = true;
   }, { passive: true });
 
-  window.addEventListener("mouseleave", () => {
-    pointer.active = false;
-  }, { passive: true });
+  window.addEventListener("mouseleave", () => { pointer.active = false; }, { passive: true });
 
-  // Touch / Pointer
   function setPointerFromTouch(t) {
     const rect = canvas.getBoundingClientRect();
     pointer.x = t.clientX - rect.left;
@@ -304,11 +433,8 @@
     if (e.touches && e.touches[0]) setPointerFromTouch(e.touches[0]);
   }, { passive: true });
 
-  window.addEventListener("touchend", () => {
-    pointer.active = false;
-  }, { passive: true });
+  window.addEventListener("touchend", () => { pointer.active = false; }, { passive: true });
 
-  // Também funciona com caneta/Pointer Events (melhor em alguns devices)
   canvas.addEventListener("pointerdown", (e) => {
     const rect = canvas.getBoundingClientRect();
     pointer.x = e.clientX - rect.left;
@@ -317,18 +443,17 @@
   }, { passive: true });
 
   canvas.addEventListener("pointermove", (e) => {
-    if (!pointer.active && e.pointerType === "mouse") return; // mouse só ativa no mousemove global
+    if (!pointer.active && e.pointerType === "mouse") return;
     const rect = canvas.getBoundingClientRect();
     pointer.x = e.clientX - rect.left;
     pointer.y = e.clientY - rect.top;
   }, { passive: true });
 
-  canvas.addEventListener("pointerup", () => {
-    pointer.active = false;
-  }, { passive: true });
+  canvas.addEventListener("pointerup", () => { pointer.active = false; }, { passive: true });
 
   window.addEventListener("resize", resize, { passive: true });
 
+  // Start
   resize();
   loop();
 })();
