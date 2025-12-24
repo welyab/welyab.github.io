@@ -2,53 +2,75 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Feliz Natal — Dev Particles</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <title>🎄 Dev Noel: Hotfix Run</title>
   <style>
-    html, body { margin: 0; height: 100%; background: #05070f; overflow: hidden; }
-    canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
-
-    .hud {
-      position: fixed;
-      left: 12px; top: 12px;
-      display: flex; gap: 10px; align-items: center;
-      color: rgba(255,255,255,.78);
-      font: 12px/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      user-select: none;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(0,0,0,.35);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,.08);
-      max-width: min(720px, calc(100vw - 24px));
+    html, body { margin: 0; height: 100%; overflow: hidden; background:#04060c; }
+    canvas { display:block; width:100vw; height:100vh; touch-action:none; }
+    .ui {
+      position: fixed; inset: 0; pointer-events: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      color: rgba(255,255,255,.86);
+    }
+    .topbar {
+      position: absolute; left: 12px; right: 12px; top: 12px;
+      display: flex; gap: 10px; align-items: center; justify-content: space-between;
     }
     .pill {
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.08);
+      pointer-events: none;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.30);
       border: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(8px);
+      display: inline-flex; gap: 10px; align-items: center;
+      font-size: 12px;
       white-space: nowrap;
     }
-    .hint {
-      position: fixed;
-      left: 12px; bottom: 12px;
-      color: rgba(255,255,255,.70);
-      font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      user-select: none;
-      background: rgba(0,0,0,.28);
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.08);
-      backdrop-filter: blur(8px);
-      max-width: min(760px, calc(100vw - 24px));
+    .center {
+      position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+      display: grid; place-items: center;
+      padding: 18px;
     }
-    .hint b { color: rgba(255,255,255,.92); }
+    .card {
+      pointer-events: auto;
+      width: min(560px, calc(100vw - 24px));
+      background: rgba(0,0,0,.40);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      padding: 16px 16px 14px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    }
+    .title {
+      font-size: 16px; font-weight: 800;
+      color: rgba(255,255,255,.95);
+      margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px;
+    }
+    .subtitle { font-size: 12px; color: rgba(255,255,255,.76); line-height: 1.35; }
+    .btnrow { display:flex; gap: 10px; margin-top: 12px; }
+    button {
+      pointer-events: auto;
+      appearance: none;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      color: rgba(255,255,255,.92);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font: 700 13px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      cursor: pointer;
+      flex: 1;
+    }
+    button:active { transform: scale(0.98); }
+    .small { font-size: 11px; opacity: .85; }
+    .footerhint {
+      margin-top: 10px; font-size: 11px; color: rgba(255,255,255,.68);
+    }
     .kbd {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 6px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
+      display:inline-block; padding:2px 6px; border-radius:8px;
+      border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06);
       transform: translateY(-1px);
     }
   </style>
@@ -56,16 +78,33 @@
 <body>
 <canvas id="c"></canvas>
 
-<div class="hud">
-  <span class="pill">console.log("Feliz Natal!")</span>
-  <span class="pill">🎄 build: green</span>
-  <span class="pill">CI ✅</span>
-  <span class="pill">deploy: 🎁</span>
-</div>
+<div class="ui">
+  <div class="topbar">
+    <div class="pill" id="leftPill">🎄 Dev Noel: <span style="opacity:.9">Hotfix Run</span></div>
+    <div class="pill" id="rightPill">score: 0 · streak: 0 · ♥♥♥</div>
+  </div>
 
-<div class="hint">
-  Passe o mouse (ou toque) perto das bolinhas: elas fogem até formar um <b>anel de equilíbrio</b> ao redor do ponteiro.
-  Afaste para elas voltarem ao texto. Dica: toque como se fosse um <span class="kbd">cursor</span> 👆
+  <div class="center" id="overlay">
+    <div class="card">
+      <div class="title">
+        <span>🎁 Dev Noel: Hotfix Run</span>
+        <span class="small" id="ver">v1.0</span>
+      </div>
+      <div class="subtitle">
+        Você é o <b>cursor</b> de um dev natalino.<br/>
+        Colete <b>commits ✅</b> (presentes) e desvie de <b>bugs 🐛</b> e <b>erros ❌</b>.<br/><br/>
+        <b>Como jogar (celular):</b> toque e arraste para mover o cursor. Solte para parar.<br/>
+        <b>Desktop:</b> mouse / toque também funciona.
+      </div>
+      <div class="btnrow">
+        <button id="playBtn">▶ Jogar</button>
+        <button id="howBtn">ℹ Dicas</button>
+      </div>
+      <div class="footerhint" id="hintText">
+        Dica: faça “combo” pegando commits seguidos sem levar dano.
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -73,389 +112,599 @@
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d", { alpha: false });
 
-  // Mensagem com tema dev
-  const MSG  = "Feliz Natal, Dev!";
-  const SUB  = "git commit -m \"Merry Christmas\"";
-  const SUB2 = "CI: ✅  |  tests: ✅  |  build: ✅  |  deploy: 🎁";
+  const rightPill = document.getElementById("rightPill");
+  const overlay = document.getElementById("overlay");
+  const playBtn = document.getElementById("playBtn");
+  const howBtn  = document.getElementById("howBtn");
+  const hintText= document.getElementById("hintText");
 
-  // Config
-  const cfg = {
-    dotRadius: 2.05,
+  // ======= VISUAL: mensagem em partículas (fundo) =======
+  const TEXT_MAIN = "Feliz Natal, Dev!";
+  const TEXT_SUB  = "git commit -m \"Merry Christmas\"";
+  const TEXT_SUB2 = "CI ✅  |  tests ✅  |  build ✅  |  deploy 🎁";
+
+  const particleCfg = {
+    dotRadius: 2.0,
     dotGap: 5,
     density: 1.0,
 
-    // repulsão com equilíbrio em anel:
-    eqDist: 92,
+    eqDist: 92,       // anel de equilíbrio do ponteiro
     deadBand: 3,
-    repelRadius: 200,
+    repelRadius: 210,
     repelStrength: 980,
     eps: 10,
 
-    // retorno ao texto (mola)
-    returnStrength: 0.080,
-
-    // dinâmica
-    damping: 0.865,
-    maxSpeed: 14,
-
-    // estética
-    jitter: 0.0,
-    dprLimit: 2
+    returnStrength: 0.07,
+    damping: 0.86,
+    maxSpeed: 14
   };
 
-  // Paleta (sem fixar em CSS, só no canvas)
-  const BG_TOP = "#061027";
-  const BG_BOT = "#03040a";
+  const DPR_LIMIT = 2;
+  let W=0,H=0,dpr=1;
 
-  // Ponteiro
-  const pointer = { x: 0, y: 0, active: false };
+  const pointer = { x: 0, y: 0, active: false }; // também vira "cursor" do jogo
+  let bgParticles = [];
 
-  // Partículas
-  let particles = [];
-  let W = 0, H = 0, dpr = 1;
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, cfg.dprLimit);
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, DPR_LIMIT);
     W = Math.floor(window.innerWidth);
     H = Math.floor(window.innerHeight);
+    canvas.width  = Math.floor(W*dpr);
+    canvas.height = Math.floor(H*dpr);
+    canvas.style.width  = W+"px";
+    canvas.style.height = H+"px";
+    ctx.setTransform(dpr,0,0,dpr,0,0);
 
-    canvas.width = Math.floor(W * dpr);
-    canvas.height = Math.floor(H * dpr);
-    canvas.style.width = W + "px";
-    canvas.style.height = H + "px";
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    buildParticlesFromText();
+    buildTextParticles();
+    // Centraliza jogador quando redimensiona
+    player.x = W*0.5; player.y = H*0.72;
   }
 
-  function drawBackground() {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, BG_TOP);
-    g.addColorStop(1, BG_BOT);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-
-    // glow suave estilo "monitor"
-    ctx.globalAlpha = 0.10;
-    ctx.fillStyle = "#43ff99"; // brilho verdinho sutil (apenas no background)
-    ctx.beginPath();
-    ctx.arc(W * 0.18, H * 0.22, Math.min(W, H) * 0.20, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    // grade discreta
-    ctx.globalAlpha = 0.06;
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1;
-    const step = 34;
-    for (let x = 0; x <= W; x += step) {
-      ctx.beginPath();
-      ctx.moveTo(x + 0.5, 0);
-      ctx.lineTo(x + 0.5, H);
-      ctx.stroke();
-    }
-    for (let y = 0; y <= H; y += step) {
-      ctx.beginPath();
-      ctx.moveTo(0, y + 0.5);
-      ctx.lineTo(W, y + 0.5);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function buildParticlesFromText() {
+  function buildTextParticles(){
     const off = document.createElement("canvas");
     const octx = off.getContext("2d");
-    off.width = W;
-    off.height = H;
+    off.width=W; off.height=H;
+    octx.clearRect(0,0,W,H);
 
-    octx.clearRect(0, 0, W, H);
+    const mainSize = Math.max(40, Math.min(150, W*0.09));
+    const subSize  = Math.max(14, Math.min(36,  W*0.028));
+    const sub2Size = Math.max(12, Math.min(26,  W*0.020));
 
-    // tamanhos responsivos
-    const mainSize = Math.max(44, Math.min(150, W * 0.095));
-    const subSize  = Math.max(14, Math.min(36,  W * 0.028));
-    const sub2Size = Math.max(12, Math.min(26,  W * 0.020));
+    octx.textAlign="center";
+    octx.textBaseline="middle";
 
-    octx.textAlign = "center";
-    octx.textBaseline = "middle";
-
-    // "Terminal glow" do texto (desenha 2x: sombra + texto)
+    // glow terminal
     octx.font = `900 ${mainSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace`;
     octx.fillStyle = "rgba(67,255,153,0.35)";
-    octx.fillText(MSG, W/2, H * 0.44);
-
+    octx.fillText(TEXT_MAIN, W/2, H*0.20);
     octx.fillStyle = "#ffffff";
-    octx.fillText(MSG, W/2, H * 0.44);
+    octx.fillText(TEXT_MAIN, W/2, H*0.20);
 
-    octx.globalAlpha = 0.95;
+    octx.globalAlpha = 0.92;
     octx.font = `700 ${subSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace`;
     octx.fillStyle = "#ffffff";
-    octx.fillText(SUB, W/2, H * 0.55);
+    octx.fillText(TEXT_SUB, W/2, H*0.30);
 
-    octx.globalAlpha = 0.85;
+    octx.globalAlpha = 0.82;
     octx.font = `600 ${sub2Size}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace`;
     octx.fillStyle = "#cfe6ff";
-    octx.fillText(SUB2, W/2, H * 0.61);
+    octx.fillText(TEXT_SUB2, W/2, H*0.35);
     octx.globalAlpha = 1;
 
-    const img = octx.getImageData(0, 0, W, H).data;
-
+    const img = octx.getImageData(0,0,W,H).data;
+    const step = Math.max(3, Math.floor(particleCfg.dotGap));
     const targets = [];
-    const step = Math.max(3, Math.floor(cfg.dotGap));
 
-    for (let y = 0; y < H; y += step) {
-      for (let x = 0; x < W; x += step) {
-        const i = (y * W + x) * 4;
-        const a = img[i + 3];
-        if (a > 25) {
-          if (cfg.density < 1 && Math.random() > cfg.density) continue;
-          targets.push({ x, y, a });
+    for(let y=0;y<H;y+=step){
+      for(let x=0;x<W;x+=step){
+        const i=(y*W+x)*4;
+        const a=img[i+3];
+        if(a>25){
+          if(particleCfg.density<1 && Math.random()>particleCfg.density) continue;
+          const kind = a>200?0:(a>120?1:2);
+          targets.push({x,y,kind});
         }
       }
     }
 
-    const old = particles;
-    particles = new Array(targets.length);
+    const old = bgParticles;
+    bgParticles = new Array(targets.length);
 
-    for (let i = 0; i < targets.length; i++) {
-      const t = targets[i];
+    for(let i=0;i<targets.length;i++){
+      const t=targets[i];
       const prev = old[i % Math.max(1, old.length)];
-
-      const startX = prev ? prev.x : (W/2 + (Math.random()-0.5)*60);
-      const startY = prev ? prev.y : (H/2 + (Math.random()-0.5)*60);
-
-      // "classe" visual baseada no alfa do texto (mais forte no MSG)
-      const kind = t.a > 200 ? 0 : (t.a > 120 ? 1 : 2);
-
-      particles[i] = {
-        x: startX, y: startY,
-        vx: prev ? prev.vx : 0,
-        vy: prev ? prev.vy : 0,
+      bgParticles[i] = {
+        x: prev?prev.x:(W/2+(Math.random()-0.5)*60),
+        y: prev?prev.y:(H/2+(Math.random()-0.5)*60),
+        vx: prev?prev.vx:0,
+        vy: prev?prev.vy:0,
         tx: t.x, ty: t.y,
-        r: cfg.dotRadius * (0.85 + Math.random()*0.55),
-        kind,
-        seed: Math.random()
+        r: particleCfg.dotRadius*(0.85+Math.random()*0.55),
+        kind: t.kind
       };
     }
   }
 
-  function keepInBounds(p) {
-    if (p.x < p.r) { p.x = p.r; p.vx *= -0.45; }
-    else if (p.x > W - p.r) { p.x = W - p.r; p.vx *= -0.45; }
-
-    if (p.y < p.r) { p.y = p.r; p.vy *= -0.45; }
-    else if (p.y > H - p.r) { p.y = H - p.r; p.vy *= -0.45; }
+  function keepInBounds(p){
+    if(p.x<p.r){p.x=p.r; p.vx*=-0.45;}
+    else if(p.x>W-p.r){p.x=W-p.r; p.vx*=-0.45;}
+    if(p.y<p.r){p.y=p.r; p.vy*=-0.45;}
+    else if(p.y>H-p.r){p.y=H-p.r; p.vy*=-0.45;}
   }
 
-  function update() {
-    const R = cfg.repelRadius;
-    const R2 = R * R;
+  function updateTextParticles(){
+    const R = particleCfg.repelRadius;
+    const R2 = R*R;
 
-    for (const p of particles) {
-      // retorno ao texto
-      const dxT = p.tx - p.x;
-      const dyT = p.ty - p.y;
-      p.vx += dxT * cfg.returnStrength;
-      p.vy += dyT * cfg.returnStrength;
+    for(const p of bgParticles){
+      // retorno ao alvo
+      p.vx += (p.tx - p.x)*particleCfg.returnStrength;
+      p.vy += (p.ty - p.y)*particleCfg.returnStrength;
 
-      // repulsão até equilíbrio (anel)
-      if (pointer.active) {
+      // repulsão com anel
+      if(pointer.active){
         const dx = p.x - pointer.x;
         const dy = p.y - pointer.y;
         const d2 = dx*dx + dy*dy;
-
-        if (d2 > 0.0001 && d2 < R2) {
+        if(d2>0.0001 && d2<R2){
           const d = Math.sqrt(d2);
-          const nx = dx / d;
-          const ny = dy / d;
-
-          // só empurra se estiver dentro do "eqDist"
-          const delta = cfg.eqDist - d;
-          if (delta > cfg.deadBand) {
-            // força ~ (delta/eqDist) * 1/(d+eps) com falloff até R
-            const ringFactor = delta / cfg.eqDist;
-            const inv = 1 / (d + cfg.eps);
-            const radiusFalloff = 1 - d / R;
-            const force = cfg.repelStrength * ringFactor * inv * radiusFalloff;
-
-            p.vx += nx * force;
-            p.vy += ny * force;
+          const nx = dx/d, ny = dy/d;
+          const delta = particleCfg.eqDist - d;
+          if(delta > particleCfg.deadBand){
+            const ringFactor = delta / particleCfg.eqDist;
+            const inv = 1/(d + particleCfg.eps);
+            const fall = 1 - d/R;
+            const force = particleCfg.repelStrength * ringFactor * inv * fall;
+            p.vx += nx*force;
+            p.vy += ny*force;
           }
         }
       }
 
-      // jitter opcional
-      if (cfg.jitter > 0) {
-        p.vx += (Math.random()-0.5) * cfg.jitter;
-        p.vy += (Math.random()-0.5) * cfg.jitter;
-      }
+      p.vx *= particleCfg.damping;
+      p.vy *= particleCfg.damping;
 
-      // amortecimento
-      p.vx *= cfg.damping;
-      p.vy *= cfg.damping;
-
-      // limita velocidade
+      // limita
       const sp2 = p.vx*p.vx + p.vy*p.vy;
-      const ms = cfg.maxSpeed;
-      if (sp2 > ms*ms) {
-        const s = Math.sqrt(sp2);
-        p.vx = (p.vx / s) * ms;
-        p.vy = (p.vy / s) * ms;
+      const ms = particleCfg.maxSpeed;
+      if(sp2>ms*ms){
+        const s=Math.sqrt(sp2);
+        p.vx = (p.vx/s)*ms;
+        p.vy = (p.vy/s)*ms;
       }
 
-      // integra
       p.x += p.vx;
       p.y += p.vy;
-
       keepInBounds(p);
     }
   }
 
-  function drawCursor(x, y) {
-    // cursor estilizado (crosshair + brackets)
-    ctx.globalAlpha = 0.65;
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = "#43ff99";
+  function drawBackground(){
+    // gradiente "monitor"
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, "#061027");
+    g.addColorStop(1, "#03040a");
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,W,H);
 
-    const s = 10;
+    // glow verde suave
+    ctx.globalAlpha=0.10;
+    ctx.fillStyle="#43ff99";
     ctx.beginPath();
-    ctx.moveTo(x - s, y);
-    ctx.lineTo(x + s, y);
-    ctx.moveTo(x, y - s);
-    ctx.lineTo(x, y + s);
-    ctx.stroke();
+    ctx.arc(W*0.16, H*0.18, Math.min(W,H)*0.20, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha=1;
 
-    const b = 16;
-    ctx.beginPath();
-    ctx.moveTo(x - b, y - b/2);
-    ctx.lineTo(x - b, y - b);
-    ctx.lineTo(x - b/2, y - b);
-    ctx.moveTo(x + b, y - b/2);
-    ctx.lineTo(x + b, y - b);
-    ctx.lineTo(x + b/2, y - b);
+    // grade discreta
+    ctx.globalAlpha=0.06;
+    ctx.strokeStyle="#ffffff";
+    ctx.lineWidth=1;
+    const step=34;
+    for(let x=0;x<=W;x+=step){
+      ctx.beginPath(); ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,H); ctx.stroke();
+    }
+    for(let y=0;y<=H;y+=step){
+      ctx.beginPath(); ctx.moveTo(0,y+0.5); ctx.lineTo(W,y+0.5); ctx.stroke();
+    }
+    ctx.globalAlpha=1;
 
-    ctx.moveTo(x - b, y + b/2);
-    ctx.lineTo(x - b, y + b);
-    ctx.lineTo(x - b/2, y + b);
-    ctx.moveTo(x + b, y + b/2);
-    ctx.lineTo(x + b, y + b);
-    ctx.lineTo(x + b/2, y + b);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
+    // "code rain" barato
+    ctx.globalAlpha=0.08;
+    ctx.fillStyle="#43ff99";
+    const cols = Math.floor(W/26);
+    const t = performance.now()*0.06;
+    for(let i=0;i<cols;i++){
+      const x=i*26+8;
+      const y=(i*97+t)%(H+140)-140;
+      ctx.fillRect(x,y,2,18);
+      ctx.fillRect(x,y+26,2,10);
+    }
+    ctx.globalAlpha=1;
   }
 
-  function render() {
-    drawBackground();
+  function drawTextParticles(){
+    for(const p of bgParticles){
+      // cor por tipo (verde/branco/azul)
+      let r=240,g=245,b=255;
+      if(p.kind===0){ r=120; g=255; b=190; }
+      else if(p.kind===1){ r=235; g=250; b=255; }
+      else { r=200; g=220; b=255; }
 
-    // partículas com "estilo dev" (verdinhas/brancas/azuladas)
-    for (const p of particles) {
-      let glow = 0;
-      if (pointer.active) {
-        const dx = p.x - pointer.x;
-        const dy = p.y - pointer.y;
-        const d = Math.sqrt(dx*dx + dy*dy);
-        glow = clamp(1 - d / cfg.repelRadius, 0, 1);
-      }
-
-      // cor por "kind" (MSG mais verde, resto mais claro/azulado)
-      // sem usar HSL pesado — usa RGB fixo por tipo
-      let r = 240, g = 245, b = 255;
-      if (p.kind === 0) { r = 120; g = 255; b = 190; }      // verde terminal
-      else if (p.kind === 1) { r = 235; g = 250; b = 255; } // branco frio
-      else { r = 200; g = 220; b = 255; }                   // azulado
-
-      // brilho extra perto do ponteiro
-      const a = 0.88 + glow * 0.12;
-      ctx.globalAlpha = a;
-
-      // glow halo
-      if (glow > 0.02) {
-        ctx.globalAlpha = 0.10 * glow;
-        ctx.fillStyle = "rgba(67,255,153,1)";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * (3.2 + glow * 3.0), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = a;
-      }
-
-      ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+      ctx.globalAlpha=0.86;
+      ctx.fillStyle=`rgb(${r|0},${g|0},${b|0})`;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
       ctx.fill();
     }
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha=1;
+  }
 
-    // "código caindo" bem leve no fundo (apenas visual, baratinho)
-    ctx.globalAlpha = 0.08;
-    ctx.fillStyle = "#43ff99";
-    const cols = Math.floor(W / 26);
-    for (let i = 0; i < cols; i++) {
-      const x = i * 26 + 8;
-      const y = (i * 97 + performance.now() * 0.06) % (H + 120) - 120;
-      ctx.fillRect(x, y, 2, 18);
-      ctx.fillRect(x, y + 26, 2, 10);
+  function drawCursor(x,y){
+    ctx.globalAlpha=0.75;
+    ctx.lineWidth=1.6;
+    ctx.strokeStyle="#43ff99";
+    const s=10, b=16;
+
+    ctx.beginPath();
+    ctx.moveTo(x-s,y); ctx.lineTo(x+s,y);
+    ctx.moveTo(x,y-s); ctx.lineTo(x,y+s);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x-b,y-b/2); ctx.lineTo(x-b,y-b); ctx.lineTo(x-b/2,y-b);
+    ctx.moveTo(x+b,y-b/2); ctx.lineTo(x+b,y-b); ctx.lineTo(x+b/2,y-b);
+    ctx.moveTo(x-b,y+b/2); ctx.lineTo(x-b,y+b); ctx.lineTo(x-b/2,y+b);
+    ctx.moveTo(x+b,y+b/2); ctx.lineTo(x+b,y+b); ctx.lineTo(x+b/2,y+b);
+    ctx.stroke();
+
+    ctx.globalAlpha=1;
+  }
+
+  // ======= JOGO =======
+  const game = {
+    state: "menu", // menu | playing | over
+    score: 0,
+    streak: 0,
+    lives: 3,
+    time: 0,
+    spawnT: 0,
+    speed: 1,
+    best: 0
+  };
+
+  const player = {
+    x: 0, y: 0,
+    vx: 0, vy: 0,
+    r: 16,
+    targetX: 0,
+    targetY: 0,
+    dragging: false
+  };
+
+  const items = []; // {x,y,vx,vy,r,type,rot}
+  // type: "commit"(bom) | "bug"(ruim) | "error"(ruim)
+
+  function resetGame(){
+    game.state="playing";
+    game.score=0;
+    game.streak=0;
+    game.lives=3;
+    game.time=0;
+    game.spawnT=0;
+    game.speed=1;
+    items.length=0;
+
+    player.x = W*0.5;
+    player.y = H*0.72;
+    player.vx = player.vy = 0;
+    player.targetX = player.x;
+    player.targetY = player.y;
+    player.dragging = false;
+
+    pointer.x = player.x;
+    pointer.y = player.y;
+    pointer.active = true; // o cursor do jogo também move o fundo
+    overlay.style.display="none";
+  }
+
+  function endGame(){
+    game.state="over";
+    game.best = Math.max(game.best, game.score);
+    overlay.style.display="grid";
+    hintText.innerHTML =
+      `Fim de jogo! score: <b>${game.score}</b> · best: <b>${game.best}</b><br/>` +
+      `Tente de novo e faça um combo de commits ✅ sem tomar bug 🐛.`;
+    playBtn.textContent = "↻ Jogar de novo";
+  }
+
+  function spawn(){
+    // aumento gradual
+    const difficulty = 1 + game.time/25000; // cresce devagar
+    game.speed = clamp(difficulty, 1, 2.3);
+
+    // decide tipo
+    const p = Math.random();
+    let type = "commit";
+    if(p < 0.18) type = "bug";
+    else if(p < 0.30) type = "error"; // total ~30% ruim, 70% bom
+
+    // spawn na parte de cima
+    const margin = 22;
+    const x = margin + Math.random()*(W - margin*2);
+    const y = -20;
+    const r = type==="commit" ? 14 : 14;
+    const vx = (Math.random()-0.5) * 0.6 * game.speed;
+    const vy = (1.2 + Math.random()*1.3) * game.speed;
+
+    items.push({ x,y,vx,vy,r,type,rot:Math.random()*Math.PI*2 });
+  }
+
+  function updateGame(dt){
+    if(game.state!=="playing") return;
+
+    game.time += dt;
+    game.spawnT += dt;
+
+    // taxa de spawn: começa mais lenta e acelera
+    const baseEvery = 520; // ms
+    const every = clamp(baseEvery - game.time/100, 260, 520);
+    while(game.spawnT > every){
+      game.spawnT -= every;
+      spawn();
     }
-    ctx.globalAlpha = 1;
 
-    if (pointer.active) drawCursor(pointer.x, pointer.y);
+    // movimento do jogador: segue o dedo/mouse (drag)
+    // suaviza, mas ainda responsivo
+    const follow = 0.020 * dt; // proporcional ao tempo
+    player.x += (player.targetX - player.x) * clamp(follow, 0.08, 0.35);
+    player.y += (player.targetY - player.y) * clamp(follow, 0.08, 0.35);
+
+    // mantém dentro
+    player.x = clamp(player.x, player.r, W-player.r);
+    player.y = clamp(player.y, player.r, H-player.r);
+
+    // sincroniza ponteiro do fundo com o cursor do jogo
+    pointer.x = player.x;
+    pointer.y = player.y;
+    pointer.active = true;
+
+    // itens caindo
+    for(let i=items.length-1;i>=0;i--){
+      const it = items[i];
+      it.x += it.vx * (dt/16.67);
+      it.y += it.vy * (dt/16.67);
+      it.rot += 0.0025*dt*(it.type==="commit"?1:1.4);
+
+      // remove se saiu
+      if(it.y > H + 40){
+        items.splice(i,1);
+        // se perdeu commit (bom), quebra streak
+        if(it.type==="commit") game.streak = 0;
+        continue;
+      }
+
+      // colisão com jogador
+      const dx = it.x - player.x;
+      const dy = it.y - player.y;
+      const rr = it.r + player.r;
+      if(dx*dx + dy*dy < rr*rr){
+        if(it.type==="commit"){
+          // pontuação com combo
+          game.streak++;
+          const combo = clamp(game.streak, 1, 12);
+          const gain = 10 + combo*2;
+          game.score += gain;
+        } else {
+          game.streak = 0;
+          game.lives--;
+          // “empurrão” visual
+          player.targetX = clamp(player.targetX + (Math.random()-0.5)*120, player.r, W-player.r);
+          player.targetY = clamp(player.targetY + (Math.random()-0.5)*120, player.r, H-player.r);
+          if(game.lives <= 0){
+            items.splice(i,1);
+            endGame();
+            return;
+          }
+        }
+        items.splice(i,1);
+      }
+    }
+
+    // update HUD
+    const hearts = "♥".repeat(game.lives) + "♡".repeat(3-game.lives);
+    rightPill.textContent = `score: ${game.score} · streak: ${game.streak} · ${hearts}`;
   }
 
-  function loop() {
-    update();
-    render();
-    requestAnimationFrame(loop);
+  function drawGame(){
+    if(game.state==="menu"){
+      rightPill.textContent = `score: 0 · streak: 0 · ♥♥♥`;
+    }
+    if(game.state==="over"){
+      const hearts = "♥".repeat(Math.max(0,game.lives)) + "♡".repeat(3-Math.max(0,game.lives));
+      rightPill.textContent = `score: ${game.score} · streak: ${game.streak} · ${hearts}`;
+    }
+
+    // desenha player
+    // “cursor” (crosshair + caret)
+    drawCursor(player.x, player.y);
+
+    // desenha itens
+    for(const it of items){
+      if(it.type==="commit"){
+        // ✅ caixa "commit"
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = "rgba(67,255,153,0.14)";
+        ctx.strokeStyle = "rgba(67,255,153,0.55)";
+        ctx.lineWidth = 1.4;
+        const w=54, h=28, r=10;
+        const x=it.x-w/2, y=it.y-h/2;
+        roundRect(ctx,x,y,w,h,r);
+        ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = "rgba(255,255,255,0.90)";
+        ctx.font = "700 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText("commit ✅", it.x, it.y);
+      } else if(it.type==="bug"){
+        // 🐛 "bug"
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = "rgba(255,120,120,0.12)";
+        ctx.strokeStyle = "rgba(255,120,120,0.55)";
+        ctx.lineWidth = 1.4;
+        const w=46, h=28, r=10;
+        const x=it.x-w/2, y=it.y-h/2;
+        roundRect(ctx,x,y,w,h,r);
+        ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = "rgba(255,255,255,0.90)";
+        ctx.font = "800 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText("bug 🐛", it.x, it.y);
+      } else {
+        // ❌ "error"
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = "rgba(255,200,90,0.12)";
+        ctx.strokeStyle = "rgba(255,200,90,0.55)";
+        ctx.lineWidth = 1.4;
+        const w=54, h=28, r=10;
+        const x=it.x-w/2, y=it.y-h/2;
+        roundRect(ctx,x,y,w,h,r);
+        ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = "rgba(255,255,255,0.92)";
+        ctx.font = "800 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText("error ❌", it.x, it.y);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // “linha de status” tipo terminal
+    if(game.state==="playing"){
+      ctx.globalAlpha=0.85;
+      ctx.fillStyle="rgba(0,0,0,0.30)";
+      ctx.strokeStyle="rgba(255,255,255,0.10)";
+      ctx.lineWidth=1;
+      roundRect(ctx, 12, H-56, W-24, 44, 14);
+      ctx.fill(); ctx.stroke();
+
+      ctx.fillStyle="rgba(255,255,255,0.90)";
+      ctx.font="700 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
+      ctx.textAlign="left"; ctx.textBaseline="middle";
+
+      const msg = game.streak>=6
+        ? `> npm test && npm run build  // streak ${game.streak} 🔥`
+        : (game.streak>=3
+           ? `> git push origin main  // streak ${game.streak} ✨`
+           : `> console.log("Feliz Natal!")  // colete commits ✅`);
+
+      ctx.fillText(msg, 22, H-34);
+      ctx.globalAlpha=1;
+    }
   }
 
-  // Interação
-  window.addEventListener("mousemove", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    pointer.x = e.clientX - rect.left;
-    pointer.y = e.clientY - rect.top;
-    pointer.active = true;
-  }, { passive: true });
-
-  window.addEventListener("mouseleave", () => { pointer.active = false; }, { passive: true });
-
-  function setPointerFromTouch(t) {
-    const rect = canvas.getBoundingClientRect();
-    pointer.x = t.clientX - rect.left;
-    pointer.y = t.clientY - rect.top;
-    pointer.active = true;
+  function roundRect(c,x,y,w,h,r){
+    r = Math.min(r, w/2, h/2);
+    c.beginPath();
+    c.moveTo(x+r,y);
+    c.arcTo(x+w,y,x+w,y+h,r);
+    c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r);
+    c.arcTo(x,y,x+w,y,r);
+    c.closePath();
   }
 
-  window.addEventListener("touchstart", (e) => {
-    if (e.touches && e.touches[0]) setPointerFromTouch(e.touches[0]);
-  }, { passive: true });
+  // ======= LOOP =======
+  let last = performance.now();
+  function frame(now){
+    const dt = now - last;
+    last = now;
 
-  window.addEventListener("touchmove", (e) => {
-    if (e.touches && e.touches[0]) setPointerFromTouch(e.touches[0]);
-  }, { passive: true });
+    updateTextParticles();
+    updateGame(dt);
 
-  window.addEventListener("touchend", () => { pointer.active = false; }, { passive: true });
+    drawBackground();
+    drawTextParticles();
+    drawGame();
 
-  canvas.addEventListener("pointerdown", (e) => {
+    requestAnimationFrame(frame);
+  }
+
+  // ======= CONTROLES (mobile-first) =======
+  function setTargetFromClient(clientX, clientY){
     const rect = canvas.getBoundingClientRect();
-    pointer.x = e.clientX - rect.left;
-    pointer.y = e.clientY - rect.top;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    player.targetX = x;
+    player.targetY = y;
+  }
+
+  // toque/arraste
+  canvas.addEventListener("pointerdown", (e)=>{
+    if(game.state==="menu" || game.state==="over") return; // evita mexer no menu
+    player.dragging = true;
+    setTargetFromClient(e.clientX, e.clientY);
     pointer.active = true;
-  }, { passive: true });
+  }, {passive:true});
 
-  canvas.addEventListener("pointermove", (e) => {
-    if (!pointer.active && e.pointerType === "mouse") return;
-    const rect = canvas.getBoundingClientRect();
-    pointer.x = e.clientX - rect.left;
-    pointer.y = e.clientY - rect.top;
-  }, { passive: true });
+  canvas.addEventListener("pointermove", (e)=>{
+    if(!player.dragging) return;
+    setTargetFromClient(e.clientX, e.clientY);
+  }, {passive:true});
 
-  canvas.addEventListener("pointerup", () => { pointer.active = false; }, { passive: true });
+  canvas.addEventListener("pointerup", ()=>{
+    player.dragging = false;
+  }, {passive:true});
 
-  window.addEventListener("resize", resize, { passive: true });
+  canvas.addEventListener("pointercancel", ()=>{
+    player.dragging = false;
+  }, {passive:true});
 
-  // Start
+  // no desktop, também segue o mouse (mais confortável)
+  window.addEventListener("mousemove", (e)=>{
+    if(game.state!=="playing") return;
+    if(player.dragging) return; // se estiver arrastando, ignore
+    setTargetFromClient(e.clientX, e.clientY);
+  }, {passive:true});
+
+  // ======= BOTÕES =======
+  playBtn.addEventListener("click", ()=>{
+    resetGame();
+  });
+
+  howBtn.addEventListener("click", ()=>{
+    hintText.innerHTML =
+      `✅ Pegue <b>commits</b> para somar pontos.<br/>` +
+      `🐛/❌ encostar tira uma vida.<br/>` +
+      `Faça <b>streak</b> para ganhar mais pontos.<br/>` +
+      `<span class="small">Dica mobile: toque e arraste com o polegar; solte para reposicionar com calma.</span>`;
+  });
+
+  // ======= START =======
+  window.addEventListener("resize", resize, {passive:true});
   resize();
-  loop();
+
+  // Estado inicial: menu com fundo animado seguindo "ponteiro fake"
+  // para dar vida mesmo antes de jogar
+  let fakeAngle = 0;
+  function menuPointerWiggle(){
+    if(game.state==="menu"){
+      fakeAngle += 0.012;
+      pointer.active = true;
+      pointer.x = W*0.5 + Math.cos(fakeAngle)*120;
+      pointer.y = H*0.55 + Math.sin(fakeAngle*1.2)*70;
+      // jogador fica “estacionado”
+      player.x = W*0.5; player.y = H*0.72;
+      player.targetX = player.x; player.targetY = player.y;
+    }
+    requestAnimationFrame(menuPointerWiggle);
+  }
+  menuPointerWiggle();
+
+  requestAnimationFrame(frame);
+
 })();
 </script>
 </body>
